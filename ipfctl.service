@@ -1,0 +1,30 @@
+#!/bin/sh
+
+. /etc/rc.subr
+
+name="ipfctl"
+rcvar="ipfctl_enable"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+
+pidfile=/var/run/gobgp.pid
+
+load_rc_config $name
+: ${system_enable:=yes}
+: ${system_msg="Nothing started."}
+
+ipfctl_start()
+{
+  /usr/sbin/daemon -cf -p ${pidfile} kldload /boot/kernel/dad.ko
+  /usr/sbin/daemon -cf -u root /boot/kernel/son
+}
+
+ipfctl_stop()
+{
+  /usr/sbin/daemon -cf -p ${pidfile} kldload /boot/kernel/dad.ko
+}
+
+
+run_rc_command "$1"

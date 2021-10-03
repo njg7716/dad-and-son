@@ -6,7 +6,7 @@ from scapy.all import IP, ICMP, sr1
 # Give IP when running this
 
 if len(sys.argv) != 2:
-    print "Usage: " + sys.argv[0] + " ip"
+    print("Usage: " + sys.argv[0] + " ip")
     sys.exit(1)
 
 # Craft IP header
